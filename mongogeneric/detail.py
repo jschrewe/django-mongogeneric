@@ -67,8 +67,8 @@ class SingleDocumentMixin(object):
                                            u"%(cls)s.model, %(cls)s.queryset, or override "
                                            u"%(cls)s.get_object()." % {
                                                 'cls': self.__class__.__name__
-                                        })
-        return self.queryset._clone()
+                                                })
+        return self.queryset.clone()
 
     def get_slug_field(self):
         """
