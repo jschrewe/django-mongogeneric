@@ -159,11 +159,17 @@ class DetailView(SingleObjectTemplateResponseMixin, BaseDetailView):
     view will support display of *any* object by overriding `self.get_object()`.
     """
 
-class EmbeddedDetailView(DetailView, BaseEmbeddedFormMixin):
+class EmbeddedDetailView(BaseEmbeddedFormMixin, DetailView):
     """
     Renders the detail view of a document and and adds a
     form for an embedded object into the template.
     
     See BaseEmbeddedFormMixin for details on the form.
     """
-
+    def get_context_data(self, **kwargs):
+        # manually call parents get_context_data without super
+        # currently django messes up the super mro chain
+        # and for multiple inheritance only one tree is followed
+        context = BaseEmbeddedFormMixin.get_context_data(self, **kwargs)
+        context.update(DetailView.get_context_data(self, **kwargs))
+        return context

@@ -89,6 +89,17 @@ class EmbeddedFormMixin(FormMixin):
         """
         object = getattr(self, 'object', self.get_object())
         return form_class(object, **self.get_form_kwargs())
+    
+    def get_embedded_object(self):
+        """
+        Returns an instance of the embedded object. By default this is a freshly created
+        instance. Override for something cooler.
+        """
+        if hasattr(self, 'embedded_object'):
+            return self.embedded_object()
+        else:
+            klass = self.get_form_class()
+            return klass.Meta.document()
 
     def get_form_kwargs(self):
         """
@@ -97,6 +108,8 @@ class EmbeddedFormMixin(FormMixin):
         kwargs = super(EmbeddedFormMixin, self).get_form_kwargs()
         object = self.get_embedded_object()
         kwargs.update({'instance': object})
+        if not 'initial' in kwargs:
+            kwargs['initial'] = {}
         return kwargs
 
     def get_success_url(self):
