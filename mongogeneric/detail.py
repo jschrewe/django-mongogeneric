@@ -6,8 +6,6 @@ from django.views.generic.base import TemplateResponseMixin, View
 
 from mongodbforms.util import get_document_options
 
-from edit import BaseEmbeddedFormMixin
-
 
 class SingleDocumentMixin(object):
     """
@@ -108,7 +106,7 @@ class BaseDetailView(SingleDocumentMixin, View):
 
 
 
-class SingleObjectTemplateResponseMixin(TemplateResponseMixin):
+class SingleDocumentTemplateResponseMixin(TemplateResponseMixin):
     template_name_field = None
     template_name_suffix = '_detail'
 
@@ -118,7 +116,7 @@ class SingleObjectTemplateResponseMixin(TemplateResponseMixin):
         a list. May not be called if get_template is overridden.
         """
         try:
-            names = super(SingleObjectTemplateResponseMixin, self).get_template_names()
+            names = super(SingleDocumentTemplateResponseMixin, self).get_template_names()
         except ImproperlyConfigured:
             # If template_name isn't specified, it's not a problem --
             # we just start with an empty list.
@@ -141,7 +139,7 @@ class SingleObjectTemplateResponseMixin(TemplateResponseMixin):
                 opts.object_name.lower(),
                 self.template_name_suffix
             ))
-        elif hasattr(self, 'document') and hasattr(self.model, '_meta'):
+        elif hasattr(self, 'document') and hasattr(self.document, '_meta'):
             opts = get_document_options(self.document)
             names.append("%s/%s%s.html" % (
                 opts.app_label,
@@ -151,25 +149,10 @@ class SingleObjectTemplateResponseMixin(TemplateResponseMixin):
         return names
 
 
-class DetailView(SingleObjectTemplateResponseMixin, BaseDetailView):
+class DetailView(SingleDocumentTemplateResponseMixin, BaseDetailView):
     """
     Render a "detail" view of an object.
 
     By default this is a model instance looked up from `self.queryset`, but the
     view will support display of *any* object by overriding `self.get_object()`.
     """
-
-class EmbeddedDetailView(BaseEmbeddedFormMixin, DetailView):
-    """
-    Renders the detail view of a document and and adds a
-    form for an embedded object into the template.
-    
-    See BaseEmbeddedFormMixin for details on the form.
-    """
-    def get_context_data(self, **kwargs):
-        # manually call parents get_context_data without super
-        # currently django messes up the super mro chain
-        # and for multiple inheritance only one tree is followed
-        context = BaseEmbeddedFormMixin.get_context_data(self, **kwargs)
-        context.update(DetailView.get_context_data(self, **kwargs))
-        return context

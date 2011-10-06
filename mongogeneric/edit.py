@@ -2,12 +2,13 @@ from django.forms import models as model_forms
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseRedirect
 from django.views.generic.base import TemplateResponseMixin, View
-from django.views.generic.detail import (SingleObjectMixin,
-                        SingleObjectTemplateResponseMixin, BaseDetailView)
+
 from django.views.generic.edit import FormMixin
 
+from mongogeneric.detail import (SingleDocumentMixin, DetailView, 
+                                 SingleDocumentTemplateResponseMixin, BaseDetailView)
 
-class DocumentFormMixin(FormMixin, SingleObjectMixin):
+class DocumentFormMixin(FormMixin, SingleDocumentMixin):
     """
     A mixin that provides a way to show and handle a documentform in a request.
     """
@@ -211,7 +212,7 @@ class BaseCreateView(DocumentFormMixin, ProcessFormView):
         return super(BaseCreateView, self).post(request, *args, **kwargs)
 
 
-class CreateView(SingleObjectTemplateResponseMixin, BaseCreateView):
+class CreateView(SingleDocumentTemplateResponseMixin, BaseCreateView):
     """
     View for creating an new object instance,
     with a response rendered by template.
@@ -234,7 +235,7 @@ class BaseUpdateView(DocumentFormMixin, ProcessFormView):
         return super(BaseUpdateView, self).post(request, *args, **kwargs)
 
 
-class UpdateView(SingleObjectTemplateResponseMixin, BaseUpdateView):
+class UpdateView(SingleDocumentTemplateResponseMixin, BaseUpdateView):
     """
     View for updating an object,
     with a response rendered by template..
@@ -273,9 +274,24 @@ class BaseDeleteView(DeletionMixin, BaseDetailView):
     """
 
 
-class DeleteView(SingleObjectTemplateResponseMixin, BaseDeleteView):
+class DeleteView(SingleDocumentTemplateResponseMixin, BaseDeleteView):
     """
     View for deleting an object retrieved with `self.get_object()`,
     with a response rendered by template.
     """
     template_name_suffix = '_confirm_delete'
+
+class EmbeddedDetailView(BaseEmbeddedFormMixin, DetailView):
+    """
+    Renders the detail view of a document and and adds a
+    form for an embedded object into the template.
+    
+    See BaseEmbeddedFormMixin for details on the form.
+    """
+    def get_context_data(self, **kwargs):
+        # manually call parents get_context_data without super
+        # currently django messes up the super mro chain
+        # and for multiple inheritance only one tree is followed
+        context = BaseEmbeddedFormMixin.get_context_data(self, **kwargs)
+        context.update(DetailView.get_context_data(self, **kwargs))
+        return context
