@@ -81,7 +81,7 @@ class SingleDocumentMixin(object):
         if self.context_object_name:
             return self.context_object_name
         elif hasattr(obj, '_meta'):
-            return smart_str(obj._meta.object_name.lower())
+            return smart_str(obj.__class__.__name__.lower())
         else:
             return None
 
