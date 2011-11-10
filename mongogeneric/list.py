@@ -23,8 +23,7 @@ class MultipleDocumentsMixin(object):
         """
         if self.queryset is not None:
             queryset = self.queryset
-            if hasattr(queryset, '_clone'):
-                queryset = queryset._clone()
+            queryset = queryset.clone()
         elif self.document is not None:
             queryset = self.document.objects()
         else:
