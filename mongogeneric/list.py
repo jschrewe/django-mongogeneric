@@ -27,7 +27,7 @@ class MultipleDocumentsMixin(object):
         elif self.document is not None:
             queryset = self.document.objects()
         else:
-            raise ImproperlyConfigured(u"'%s' must define 'queryset' or 'model'"
+            raise ImproperlyConfigured(u"'%s' must define 'queryset' or 'document'"
                                        % self.__class__.__name__)
         return queryset
 
@@ -77,8 +77,9 @@ class MultipleDocumentsMixin(object):
         """
         if self.context_object_name:
             return self.context_object_name
-        elif hasattr(object_list, 'model'):
-            return smart_str('%s_list' % object_list.model._meta.object_name.lower())
+        elif hasattr(object_list, '_document'):
+            opts = get_document_options(object_list._document)
+            return smart_str('%s_list' % opts.object_name.lower())
         else:
             return None
 
@@ -88,6 +89,7 @@ class MultipleDocumentsMixin(object):
         """
         queryset = kwargs.pop('object_list')
         page_size = self.get_paginate_by(queryset)
+        context_object_name = self.get_context_object_name(queryset)
         if page_size:
             paginator, page, queryset, is_paginated = self.paginate_queryset(queryset, page_size)
             context = {
@@ -104,7 +106,6 @@ class MultipleDocumentsMixin(object):
                 'object_list': queryset
             }
         context.update(kwargs)
-        context_object_name = self.get_context_object_name(queryset)
         if context_object_name is not None:
             context[context_object_name] = queryset
         return context
@@ -137,7 +138,7 @@ class MultipleDocumentsTemplateResponseMixin(TemplateResponseMixin):
             names = []
 
         # If the list is a queryset, we'll invent a template name based on the
-        # app and model name. This name gets put at the end of the template
+        # app and document name. This name gets put at the end of the template
         # name list so that user-supplied names override the automatically-
         # generated ones.
         if hasattr(self.object_list, '_document'):
@@ -149,7 +150,7 @@ class MultipleDocumentsTemplateResponseMixin(TemplateResponseMixin):
 
 class ListView(MultipleDocumentsTemplateResponseMixin, BaseListView):
     """
-    Render some list of objects, set by `self.model` or `self.queryset`.
+    Render some list of objects, set by `self.document` or `self.queryset`.
     `self.queryset` can actually be any iterable of items, not just a queryset.
     """
     

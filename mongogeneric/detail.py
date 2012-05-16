@@ -130,8 +130,8 @@ class SingleDocumentTemplateResponseMixin(TemplateResponseMixin):
             if name:
                 names.insert(0, name)
 
-        # The least-specific option is the default <app>/<model>_detail.html;
-        # only use this if the object in question is a model.
+        # The least-specific option is the default <app>/<document>_detail.html;
+        # only use this if the object in question is a document.
         if hasattr(self.object, '_meta'):
             opts = get_document_options(self.object)
             names.append("%s/%s%s.html" % (
@@ -153,6 +153,6 @@ class DetailView(SingleDocumentTemplateResponseMixin, BaseDetailView):
     """
     Render a "detail" view of an object.
 
-    By default this is a model instance looked up from `self.queryset`, but the
+    By default this is a document instance looked up from `self.queryset`, but the
     view will support display of *any* object by overriding `self.get_object()`.
     """
