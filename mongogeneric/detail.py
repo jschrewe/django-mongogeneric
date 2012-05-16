@@ -1,4 +1,4 @@
-from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
+from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404
 from django.utils.encoding import smart_str
 from django.utils.translation import ugettext as _
@@ -6,6 +6,7 @@ from django.views.generic.base import TemplateResponseMixin, View
 
 from mongodbforms.util import get_document_options
 
+from mongoengine.queryset import DoesNotExist
 
 class SingleDocumentMixin(object):
     """
@@ -47,9 +48,9 @@ class SingleDocumentMixin(object):
 
         try:
             obj = queryset.get()
-        except ObjectDoesNotExist:
-            raise Http404(_(u"No %(verbose_name)s found matching the query") %
-                          {'verbose_name': queryset.model._meta.verbose_name})
+        except DoesNotExist:
+            raise Http404(_(u"No %(document_name)s found matching the query") %
+                          {'document_name': queryset._document._class_name})
         return obj
 
     def get_queryset(self):
@@ -62,8 +63,8 @@ class SingleDocumentMixin(object):
                 return self.document.objects()
             else:
                 raise ImproperlyConfigured(u"%(cls)s is missing a queryset. Define "
-                                           u"%(cls)s.model, %(cls)s.queryset, or override "
-                                           u"%(cls)s.get_object()." % {
+                                           u"%(cls)s.document, %(cls)s.queryset, or override "
+                                           u"%(cls)s.get_queryset()." % {
                                                 'cls': self.__class__.__name__
                                                 })
         return self.queryset.clone()
@@ -80,8 +81,8 @@ class SingleDocumentMixin(object):
         """
         if self.context_object_name:
             return self.context_object_name
-        elif hasattr(obj, '_meta'):
-            return smart_str(obj.__class__.__name__.lower())
+        elif hasattr(obj, '_class_name'):
+            return smart_str(obj._class_name)
         else:
             return None
 
