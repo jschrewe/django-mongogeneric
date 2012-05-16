@@ -1,4 +1,5 @@
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import get_verbose_name
 from django.http import Http404
 from django.utils.encoding import smart_str
 from django.utils.translation import ugettext as _
@@ -52,8 +53,8 @@ class SingleDocumentMixin(object):
         try:
             obj = queryset.get()
         except DoesNotExist:
-            raise Http404(_(u"No %(document_name)s found matching the query") %
-                          {'document_name': queryset._document._class_name})
+            raise Http404(_(u"No %(verbose_name)s found matching the query") %
+                          {'verbose_name': get_verbose_name(queryset._document.__class__.__name__)})
         return obj
 
     def get_queryset(self):
@@ -84,10 +85,8 @@ class SingleDocumentMixin(object):
         """
         if self.context_object_name:
             return self.context_object_name
-        elif hasattr(obj, '_class_name'):
-            return smart_str(obj._class_name)
         else:
-            return None
+            return smart_str(obj.__class__.__name__.lower())
 
     def get_context_data(self, **kwargs):
         context = kwargs
