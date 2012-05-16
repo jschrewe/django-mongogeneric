@@ -8,6 +8,7 @@ from mongodbforms.util import get_document_options
 
 from mongoengine.queryset import DoesNotExist
 
+
 class SingleDocumentMixin(object):
     """
     Provides the ability to retrieve a single object for further manipulation.
@@ -16,6 +17,8 @@ class SingleDocumentMixin(object):
     queryset = None
     slug_field = 'slug'
     context_object_name = None
+    slug_url_kwarg = 'slug'
+    pk_url_kwarg = 'pk'
 
     def get_object(self, queryset=None):
         """
@@ -30,8 +33,8 @@ class SingleDocumentMixin(object):
             queryset = self.get_queryset()
 
         # Next, try looking up by primary key.
-        pk = self.kwargs.get('pk', None)
-        slug = self.kwargs.get('slug', None)
+        pk = self.kwargs.get(self.pk_url_kwarg, None)
+        slug = self.kwargs.get(self.slug_url_kwarg, None)
         if pk is not None:
             queryset = queryset.filter(pk=pk)
 
@@ -87,11 +90,7 @@ class SingleDocumentMixin(object):
             return None
 
     def get_context_data(self, **kwargs):
-        try:
-            context = super(SingleDocumentMixin, self).get_context_data(**kwargs)
-        except AttributeError:
-            context = kwargs
-        context.update(kwargs)
+        context = kwargs
         context_object_name = self.get_context_object_name(self.object)
         if context_object_name:
             context[context_object_name] = self.object
@@ -104,7 +103,6 @@ class BaseDetailView(SingleDocumentMixin, View):
         context = self.get_context_data(object=self.object)
         resp = self.render_to_response(context)
         return resp
-
 
 
 class SingleDocumentTemplateResponseMixin(TemplateResponseMixin):
