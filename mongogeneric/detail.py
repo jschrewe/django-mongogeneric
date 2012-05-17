@@ -1,10 +1,12 @@
-from django.core.exceptions import ImproperlyConfigured, ObjectDoesNotExist
+from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404
 from django.utils.encoding import smart_str
 from django.utils.translation import ugettext as _
 from django.views.generic.base import TemplateResponseMixin, View
 
 from mongodbforms.util import get_document_options
+
+from mongoengine.queryset import DoesNotExist
 
 
 class SingleDocumentMixin(object):
@@ -15,6 +17,8 @@ class SingleDocumentMixin(object):
     queryset = None
     slug_field = 'slug'
     context_object_name = None
+    slug_url_kwarg = 'slug'
+    pk_url_kwarg = 'pk'
 
     def get_object(self, queryset=None):
         """
@@ -29,8 +33,8 @@ class SingleDocumentMixin(object):
             queryset = self.get_queryset()
 
         # Next, try looking up by primary key.
-        pk = self.kwargs.get('pk', None)
-        slug = self.kwargs.get('slug', None)
+        pk = self.kwargs.get(self.pk_url_kwarg, None)
+        slug = self.kwargs.get(self.slug_url_kwarg, None)
         if pk is not None:
             queryset = queryset.filter(pk=pk)
 
@@ -47,9 +51,10 @@ class SingleDocumentMixin(object):
 
         try:
             obj = queryset.get()
-        except ObjectDoesNotExist:
+        except DoesNotExist:
+            opts = get_document_options(queryset._document)
             raise Http404(_(u"No %(verbose_name)s found matching the query") %
-                          {'verbose_name': queryset.model._meta.verbose_name})
+                          {'verbose_name': opts.verbose_name})
         return obj
 
     def get_queryset(self):
@@ -62,8 +67,8 @@ class SingleDocumentMixin(object):
                 return self.document.objects()
             else:
                 raise ImproperlyConfigured(u"%(cls)s is missing a queryset. Define "
-                                           u"%(cls)s.model, %(cls)s.queryset, or override "
-                                           u"%(cls)s.get_object()." % {
+                                           u"%(cls)s.document, %(cls)s.queryset, or override "
+                                           u"%(cls)s.get_queryset()." % {
                                                 'cls': self.__class__.__name__
                                                 })
         return self.queryset.clone()
@@ -81,16 +86,13 @@ class SingleDocumentMixin(object):
         if self.context_object_name:
             return self.context_object_name
         elif hasattr(obj, '_meta'):
-            return smart_str(obj.__class__.__name__.lower())
+            opts = get_document_options(obj)
+            return smart_str(opts.object_name.lower())
         else:
             return None
 
     def get_context_data(self, **kwargs):
-        try:
-            context = super(SingleDocumentMixin, self).get_context_data(**kwargs)
-        except AttributeError:
-            context = kwargs
-        context.update(kwargs)
+        context = kwargs
         context_object_name = self.get_context_object_name(self.object)
         if context_object_name:
             context[context_object_name] = self.object
@@ -101,9 +103,7 @@ class BaseDetailView(SingleDocumentMixin, View):
     def get(self, request, **kwargs):
         self.object = self.get_object()
         context = self.get_context_data(object=self.object)
-        resp = self.render_to_response(context)
-        return resp
-
+        return self.render_to_response(context)
 
 
 class SingleDocumentTemplateResponseMixin(TemplateResponseMixin):
@@ -130,8 +130,8 @@ class SingleDocumentTemplateResponseMixin(TemplateResponseMixin):
             if name:
                 names.insert(0, name)
 
-        # The least-specific option is the default <app>/<model>_detail.html;
-        # only use this if the object in question is a model.
+        # The least-specific option is the default <app>/<document>_detail.html;
+        # only use this if the object in question is a document.
         if hasattr(self.object, '_meta'):
             opts = get_document_options(self.object)
             names.append("%s/%s%s.html" % (
@@ -153,6 +153,6 @@ class DetailView(SingleDocumentTemplateResponseMixin, BaseDetailView):
     """
     Render a "detail" view of an object.
 
-    By default this is a model instance looked up from `self.queryset`, but the
+    By default this is a document instance looked up from `self.queryset`, but the
     view will support display of *any* object by overriding `self.get_object()`.
     """

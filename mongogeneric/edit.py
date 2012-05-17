@@ -1,9 +1,8 @@
 from django.forms import models as model_forms
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponseRedirect
-from django.views.generic.base import TemplateResponseMixin, View
 
-from django.views.generic.edit import FormMixin
+from django.views.generic.edit import FormMixin, ProcessFormView, DeletionMixin
 
 from mongogeneric.detail import (SingleDocumentMixin, DetailView, 
                                  SingleDocumentTemplateResponseMixin, BaseDetailView)
@@ -21,17 +20,18 @@ class DocumentFormMixin(FormMixin, SingleDocumentMixin):
             return self.form_class
         else:
             if self.document is not None:
-                # If a model has been explicitly provided, use it
+                # If a document has been explicitly provided, use it
                 document = self.document
             elif hasattr(self, 'object') and self.object is not None:
                 # If this view is operating on a single object, use
                 # the class of that object
-                model = self.object.__class__
+                document = self.object.__class__
             else:
-                # Try to get a queryset and extract the model class
+                # Try to get a queryset and extract the document class
                 # from that
-                document = self.get_queryset().model
-            return model_forms.modelform_factory(model)
+                document = self.get_queryset()._document
+            # TODO: Use mongodbforms to build a form, currently this simply blows up
+            return model_forms.modelform_factory(document)
 
     def get_form_kwargs(self):
         """
@@ -50,7 +50,7 @@ class DocumentFormMixin(FormMixin, SingleDocumentMixin):
             except AttributeError:
                 raise ImproperlyConfigured(
                     "No URL to redirect to.  Either provide a url or define"
-                    " a get_absolute_url method on the Model.")
+                    " a get_absolute_url method on the document.")
         return url
 
     def form_valid(self, form):
@@ -123,7 +123,7 @@ class EmbeddedFormMixin(FormMixin):
             except AttributeError:
                 raise ImproperlyConfigured(
                     "No URL to redirect to.  Either provide a url or define"
-                    " a get_absolute_url method on the Model.")
+                    " a get_absolute_url method on the document.")
         return url
 
     def form_valid(self, form):
@@ -142,6 +142,7 @@ class EmbeddedFormMixin(FormMixin):
         
         return context
 
+
 class ProcessEmbeddedFormMixin(object):
     """
     A mixin that processes an embedded form on POST. 
@@ -156,45 +157,12 @@ class ProcessEmbeddedFormMixin(object):
             return self.form_invalid(form)
         super(ProcessEmbeddedFormMixin, self).post(request, *args, **kwargs)
 
+
 class BaseEmbeddedFormMixin(EmbeddedFormMixin, ProcessEmbeddedFormMixin):  
     """
     A Mixin that handles an embedded form on POST and 
     adds the form into the template context.
     """      
-
-class ProcessFormView(View):
-    """
-    A mixin that processes a form on POST.
-    """
-    def get(self, request, *args, **kwargs):
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        return self.render_to_response(self.get_context_data(form=form))
-
-    def post(self, request, *args, **kwargs):
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        if form.is_valid():
-            return self.form_valid(form)
-        else:
-            return self.form_invalid(form)
-
-    # PUT is a valid HTTP verb for creating (with a known URL) or editing an
-    # object, note that browsers only support POST for now.
-    def put(self, *args, **kwargs):
-        return self.post(*args, **kwargs)
-
-
-class BaseFormView(FormMixin, ProcessFormView):
-    """
-    A base view for displaying a form
-    """
-
-
-class FormView(TemplateResponseMixin, BaseFormView):
-    """
-    A view for displaying a form, and rendering a template response.
-    """
 
 
 class BaseCreateView(DocumentFormMixin, ProcessFormView):
@@ -243,29 +211,6 @@ class UpdateView(SingleDocumentTemplateResponseMixin, BaseUpdateView):
     template_name_suffix = '_form'
 
 
-class DeletionMixin(object):
-    """
-    A mixin providing the ability to delete objects
-    """
-    success_url = None
-
-    def delete(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        self.object.delete()
-        return HttpResponseRedirect(self.get_success_url())
-
-    # Add support for browsers which only accept GET and POST for now.
-    def post(self, *args, **kwargs):
-        return self.delete(*args, **kwargs)
-
-    def get_success_url(self):
-        if self.success_url:
-            return self.success_url
-        else:
-            raise ImproperlyConfigured(
-                "No URL to redirect to. Provide a success_url.")
-
-
 class BaseDeleteView(DeletionMixin, BaseDetailView):
     """
     Base view for deleting an object.
@@ -280,6 +225,7 @@ class DeleteView(SingleDocumentTemplateResponseMixin, BaseDeleteView):
     with a response rendered by template.
     """
     template_name_suffix = '_confirm_delete'
+
 
 class EmbeddedDetailView(BaseEmbeddedFormMixin, DetailView):
     """
