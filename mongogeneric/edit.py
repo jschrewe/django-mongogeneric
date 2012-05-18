@@ -4,6 +4,7 @@ from django.http import HttpResponseRedirect
 
 from django.views.generic.edit import FormMixin, ProcessFormView, DeletionMixin
 
+from mongodbforms.documents import documentform_factory
 from mongogeneric.detail import (SingleDocumentMixin, DetailView, 
                                  SingleDocumentTemplateResponseMixin, BaseDetailView)
 
@@ -30,8 +31,7 @@ class DocumentFormMixin(FormMixin, SingleDocumentMixin):
                 # Try to get a queryset and extract the document class
                 # from that
                 document = self.get_queryset()._document
-            # TODO: Use mongodbforms to build a form, currently this simply blows up
-            return model_forms.modelform_factory(document)
+            return documentform_factory(document)
 
     def get_form_kwargs(self):
         """
