@@ -45,15 +45,15 @@ class SingleDocumentMixin(object):
 
         # If none of those are defined, it's an error.
         else:
-            raise AttributeError(u"Generic detail view %s must be called with "
-                                 u"either an object pk or a slug."
+            raise AttributeError("Generic detail view %s must be called with "
+                                 "either an object pk or a slug."
                                  % self.__class__.__name__)
 
         try:
             obj = queryset.get()
         except DoesNotExist:
             opts = get_document_options(queryset._document)
-            raise Http404(_(u"No %(verbose_name)s found matching the query") %
+            raise Http404(_("No %(verbose_name)s found matching the query") %
                           {'verbose_name': opts.verbose_name})
         return obj
 
@@ -66,9 +66,9 @@ class SingleDocumentMixin(object):
             if self.document:
                 return self.document.objects()
             else:
-                raise ImproperlyConfigured(u"%(cls)s is missing a queryset. Define "
-                                           u"%(cls)s.document, %(cls)s.queryset, or override "
-                                           u"%(cls)s.get_queryset()." % {
+                raise ImproperlyConfigured("%(cls)s is missing a queryset. Define "
+                                           "%(cls)s.document, %(cls)s.queryset, or override "
+                                           "%(cls)s.get_queryset()." % {
                                                 'cls': self.__class__.__name__
                                                 })
         return self.queryset.clone()
